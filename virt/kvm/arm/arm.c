@@ -87,6 +87,10 @@ int kvm_vm_ioctl_enable_cap(struct kvm *kvm,
 		r = 0;
 		kvm->arch.return_nisv_io_abort_to_user = true;
 		break;
+	case KVM_CAP_ARM_IDSR_TO_USER:
+		r = 0;
+		kvm->arch.return_idsr_to_user = true;
+		break;
 	default:
 		r = -EINVAL;
 		break;
@@ -195,6 +199,7 @@ int kvm_vm_ioctl_check_extension(struct kvm *kvm, long ext)
 	case KVM_CAP_ARM_IRQ_LINE_LAYOUT_2:
 	case KVM_CAP_ARM_NISV_TO_USER:
 	case KVM_CAP_ARM_INJECT_EXT_DABT:
+	case KVM_CAP_ARM_IDSR_TO_USER:
 		r = 1;
 		break;
 	case KVM_CAP_ARM_SET_DEVICE_ADDR:
@@ -652,6 +657,12 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu, struct kvm_run *run)
 
 	if (run->exit_reason == KVM_EXIT_MMIO) {
 		ret = kvm_handle_mmio_return(vcpu, vcpu->run);
+		if (ret)
+			return ret;
+	}
+
+	if (run->exit_reason == KVM_EXIT_ARM_IDSR) {
+		ret = kvm_handle_idsr_return(vcpu, vcpu->run);
 		if (ret)
 			return ret;
 	}
